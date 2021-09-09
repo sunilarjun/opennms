@@ -1,0 +1,10 @@
+tabWidth: 4
+overrides:
+  - files:
+    - "*.css"
+    - "*.js"
+    - "*.scss"
+    - "*.ts"
+    - "*.yml"
+    options:
+      tabWidth: 2
