@@ -1378,7 +1378,7 @@
     <commonsDigesterVersion>2.1</commonsDigesterVersion>
     <commonsJexlVersion>2.1.1</commonsJexlVersion>
     <commonsJxpathVersion>1.3</commonsJxpathVersion>
-    <commonsIoVersion>2.8.0</commonsIoVersion>
+    <commonsIoVersion>2.11.0</commonsIoVersion>
     <commonsLangVersion>2.6</commonsLangVersion>
     <commonsLang3Version>3.4</commonsLang3Version>
     <commonsLoggingVersion>99.99.99-use-jcl-over-slf4j</commonsLoggingVersion>
@@ -1436,7 +1436,7 @@
     <jsoupVersion>1.7.2</jsoupVersion>
     <jsonlibVersion>2.4</jsonlibVersion>
     <jsonlibBundleVersion>2.4_1</jsonlibBundleVersion>
-    <karafVersion>4.2.6</karafVersion>
+    <karafVersion>4.2.14</karafVersion>
     <kafkaBundleVersion>2.3.0_1</kafkaBundleVersion>
     <kafkaVersion>2.3.0</kafkaVersion>
     <liquibaseVersion>3.6.3</liquibaseVersion>
@@ -1452,7 +1452,7 @@
     <paxExamVersion>4.13.1</paxExamVersion>
     <paxLoggingVersion>1.11.12</paxLoggingVersion>
     <paxSwissboxVersion>1.8.2</paxSwissboxVersion>
-    <paxWebVersion>7.2.8</paxWebVersion>
+    <paxWebVersion>7.2.29</paxWebVersion>
     <protobufVersion>3.6.1</protobufVersion>
     <protobuf2Version>2.6.1</protobuf2Version>
     <postgresqlVersion>42.2.5</postgresqlVersion>
