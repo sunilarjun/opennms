@@ -1,10 +1,10 @@
 executors:
   centos-build-executor:
     docker:
-      - image: opennms/build-env:11.0.12.0.7-3.6.3-b7295
+      - image: opennms/build-env:17.0.1_12-3.8.4-b7902
   debian-build-executor:
     docker:
-      - image: opennms/build-env:debian-jdk11-b7291
+      - image: opennms/build-env:debian-jdk17-b7901
   docker-executor:
     docker:
       - image: docker:20.10.1-git
