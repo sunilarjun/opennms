@@ -1406,7 +1406,8 @@
         <feature>opennms-graphml</feature>
         <feature>opennms-topology-runtime-base</feature>
         <bundle>mvn:org.opennms.features.topology.plugins.topo/graphml/${project.version}</bundle>
-        <bundle>mvn:org.codehaus.groovy/groovy-all/${groovyVersion}</bundle>
+        <bundle>mvn:org.codehaus.groovy/groovy/${groovyVersion}</bundle>
+        <bundle>mvn:org.codehaus.groovy/groovy-xml/${groovyVersion}</bundle>
         <bundle>mvn:org.opennms.features/org.opennms.features.osgi-jsr223/${project.version}</bundle>
     </feature>
     <feature name="opennms-topology-runtime-asset" version="${project.version}" description="OpenNMS :: Features :: Topology :: Features :: Runtime :: Asset">

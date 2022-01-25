@@ -39,6 +39,7 @@
     <dependency>
       <groupId>org.codehaus.groovy</groupId>
       <artifactId>groovy-all</artifactId>
+      <type>pom</type>
     </dependency>
     <dependency>
       <groupId>org.opennms.features.collection</groupId>

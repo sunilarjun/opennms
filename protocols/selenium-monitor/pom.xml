@@ -146,6 +146,7 @@
     <dependency>
         <groupId>org.codehaus.groovy</groupId>
         <artifactId>groovy-all</artifactId>
+        <type>pom</type>
         <exclusions>
           <exclusion>
             <groupId>asm</groupId>
