@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2011-2014 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2014 The OpenNMS Group, Inc.
+ * Copyright (C) 2011-2022 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2022 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -36,9 +36,10 @@ import javax.servlet.ServletContext;
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 
+import static org.mockito.Mockito.*;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.easymock.EasyMock;
 import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Test;
@@ -122,13 +123,9 @@ public class ScheduledOutagesRestServiceIT extends AbstractSpringJerseyRestTestC
         m_pollOutagesDao.overrideConfig(new FileSystemResource(outagesConfig).getInputStream());
 
         // Setup Filter DAO
-        m_filterDao = EasyMock.createMock(FilterDao.class);
-        EasyMock.expect(m_filterDao.getActiveIPAddressList("IPADDR != '0.0.0.0'")).andReturn(Collections.singletonList(InetAddressUtils.getLocalHostAddress())).anyTimes();
-        m_filterDao.validateRule("IPADDR != '0.0.0.0'");
-        EasyMock.expectLastCall().anyTimes();
-        m_filterDao.flushActiveIpAddressListCache();
-        EasyMock.expectLastCall().anyTimes();
-        EasyMock.replay(m_filterDao);
+        m_filterDao = mock(FilterDao.class);
+        when(m_filterDao.getActiveIPAddressList("IPADDR != '0.0.0.0'")).thenReturn(Collections.singletonList(InetAddressUtils.getLocalHostAddress()));
+        
         FilterDaoFactory.setInstance(m_filterDao);
 
         // Setup Collectd Configuration
@@ -201,7 +198,9 @@ public class ScheduledOutagesRestServiceIT extends AbstractSpringJerseyRestTestC
 
     @Override
     public void afterServletDestroy() {
-        EasyMock.verify(m_filterDao);
+        verify(m_filterDao, atLeastOnce()).validateRule("IPADDR != '0.0.0.0'");
+        verify(m_filterDao, atLeastOnce()).flushActiveIpAddressListCache();
+        verifyNoMoreInteractions(m_filterDao);
         MockLogAppender.assertNoWarningsOrGreater();
     }
 
