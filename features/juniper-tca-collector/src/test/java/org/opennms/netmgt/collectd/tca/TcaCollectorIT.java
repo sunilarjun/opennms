@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2012-2014 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2014 The OpenNMS Group, Inc.
+ * Copyright (C) 2012-2022 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2022 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -28,6 +28,10 @@
 
 package org.opennms.netmgt.collectd.tca;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,7 +40,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.easymock.EasyMock;
 import org.jrobin.core.Robin;
 import org.jrobin.core.RrdDb;
 import org.junit.After;
@@ -222,14 +225,12 @@ public class TcaCollectorIT implements InitializingBean {
 		TcaDataCollectionConfig tcadcc = new TcaDataCollectionConfig();
 		tcadcc.addDataCollection(tcadc);
 		tcadcc.setRrdRepository(getSnmpRoot().getAbsolutePath());
-		EasyMock.expect(m_configDao.getConfig()).andReturn(tcadcc).atLeastOnce();
-		EasyMock.replay(m_configDao);
+		when(m_configDao.getConfig()).thenReturn(tcadcc);
 
 		// Define the resource type
 		ResourceType resourceType = getJuniperTcaEntryResourceType();
-		m_resourceTypesDao = EasyMock.createMock(ResourceTypesDao.class);
-		EasyMock.expect(m_resourceTypesDao.getResourceTypeByName(TcaCollectionHandler.RESOURCE_TYPE_NAME)).andReturn(resourceType).anyTimes();
-		EasyMock.replay(m_resourceTypesDao);
+		m_resourceTypesDao = mock(ResourceTypesDao.class);
+		when(m_resourceTypesDao.getResourceTypeByName(TcaCollectionHandler.RESOURCE_TYPE_NAME)).thenReturn(resourceType);
 	}
 
 	public static ResourceType getJuniperTcaEntryResourceType() {
@@ -253,7 +254,7 @@ public class TcaCollectorIT implements InitializingBean {
 	 */
 	@After
 	public void tearDown() throws Exception {
-		EasyMock.verify(m_configDao);
+		verifyNoMoreInteractions(m_configDao);
 		MockLogAppender.assertNoWarningsOrGreater();
 	}
 
