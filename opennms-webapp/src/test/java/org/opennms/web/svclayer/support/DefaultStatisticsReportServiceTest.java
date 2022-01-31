@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2007-2014 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2014 The OpenNMS Group, Inc.
+ * Copyright (C) 2007-2022 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2022 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -28,10 +28,12 @@
 
 package org.opennms.web.svclayer.support;
 
-import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.SortedSet;
 
@@ -45,7 +47,6 @@ import org.opennms.netmgt.model.ResourceReference;
 import org.opennms.netmgt.model.StatisticsReport;
 import org.opennms.netmgt.model.StatisticsReportData;
 import org.opennms.test.ThrowableAnticipator;
-import org.opennms.test.mock.EasyMockUtils;
 import org.opennms.web.svclayer.model.StatisticsReportCommand;
 import org.opennms.web.svclayer.model.StatisticsReportModel;
 import org.opennms.web.svclayer.model.StatisticsReportModel.Datum;
@@ -58,11 +59,9 @@ import org.springframework.validation.BindException;
  * @author <a href="dj@opennms.org">DJ Gregor</a>
  */
 public class DefaultStatisticsReportServiceTest {
-    private EasyMockUtils m_mocks = new EasyMockUtils();
-    
     private DefaultStatisticsReportService m_service = new DefaultStatisticsReportService();
-    private ResourceDao m_resourceDao = m_mocks.createMock(ResourceDao.class);
-    private StatisticsReportDao m_statisticsReportDao = m_mocks.createMock(StatisticsReportDao.class);
+    private ResourceDao m_resourceDao = mock(ResourceDao.class);
+    private StatisticsReportDao m_statisticsReportDao = mock(StatisticsReportDao.class);
 
     @Before
     public void setUp() throws Exception {
@@ -73,7 +72,8 @@ public class DefaultStatisticsReportServiceTest {
 
     @After
     public void verify() throws Throwable {
-        m_mocks.verifyAll();
+        verifyNoMoreInteractions(m_resourceDao);
+        verifyNoMoreInteractions(m_statisticsReportDao);
     }
     
     @Test
@@ -84,7 +84,6 @@ public class DefaultStatisticsReportServiceTest {
         ThrowableAnticipator ta = new ThrowableAnticipator();
         ta.anticipate(new IllegalArgumentException("id property on command object cannot be null"));
 
-        m_mocks.replayAll();
         try {
             m_service.getReport(command , errors);
         } catch (Throwable t) {
@@ -113,12 +112,11 @@ public class DefaultStatisticsReportServiceTest {
         
         BindException errors = new BindException(command, "");
         
-        expect(m_statisticsReportDao.load(report.getId())).andReturn(report);
+        when(m_statisticsReportDao.load(report.getId())).thenReturn(report);
         m_statisticsReportDao.initialize(report);
         m_statisticsReportDao.initialize(report.getData());
-        expect(m_resourceDao.getResourceById(ResourceId.fromString(resourceRef.getResourceId()))).andReturn(null);
+        when(m_resourceDao.getResourceById(ResourceId.fromString(resourceRef.getResourceId()))).thenReturn(null);
         
-        m_mocks.replayAll();
         StatisticsReportModel model = m_service.getReport(command, errors);
         
         assertNotNull("model should not be null", model);
