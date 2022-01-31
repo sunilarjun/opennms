@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2012-2014 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2014 The OpenNMS Group, Inc.
+ * Copyright (C) 2012-2022 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2022 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -31,13 +31,20 @@ package org.opennms.netmgt.ticketd;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 
-import org.easymock.EasyMock;
-import org.easymock.IAnswer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.opennms.api.integration.ticketing.Plugin;
 import org.opennms.api.integration.ticketing.PluginException;
 import org.opennms.api.integration.ticketing.Ticket;
@@ -48,7 +55,6 @@ import org.opennms.netmgt.dao.mock.MockEventIpcManager;
 import org.opennms.netmgt.events.api.EventIpcManagerFactory;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.TroubleTicketState;
-import org.opennms.test.mock.EasyMockUtils;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -65,7 +71,6 @@ import com.google.common.collect.ImmutableMap;
 public class DroolsTicketerServiceLayerTest {
 
     private DefaultTicketerServiceLayer m_droolsTicketerServiceLayer;
-    private EasyMockUtils m_easyMockUtils;
     private DroolsTicketerConfigDao m_configDao;
     private AlarmDao m_alarmDao;
     private Plugin m_ticketerPlugin;
@@ -83,21 +88,17 @@ public class DroolsTicketerServiceLayerTest {
         ResourceLoader loader = new DefaultResourceLoader();
         Resource resource = loader.getResource("classpath:/drools-ticketer-rules.drl");
         
-        m_easyMockUtils = new EasyMockUtils();
-        m_configDao = m_easyMockUtils.createMock(DroolsTicketerConfigDao.class);
-        EasyMock.expect(m_configDao.getRulesFile()).andReturn(resource.getFile()).times(1);
-        EasyMock.replay(m_configDao);
+        m_configDao = mock(DroolsTicketerConfigDao.class);
+        when(m_configDao.getRulesFile()).thenReturn(resource.getFile());
         
-        m_alarmDao = m_easyMockUtils.createMock(AlarmDao.class);
-        m_ticketerPlugin = m_easyMockUtils.createMock(Plugin.class);
-        m_alarmEntityNotifier = m_easyMockUtils.createMock(AlarmEntityNotifier.class);
+        m_alarmDao = mock(AlarmDao.class);
+        m_ticketerPlugin = mock(Plugin.class);
+        m_alarmEntityNotifier = mock(AlarmEntityNotifier.class);
         
         m_droolsTicketerServiceLayer = new DroolsTicketerServiceLayer(m_configDao);
         m_droolsTicketerServiceLayer.setAlarmDao(m_alarmDao);
         m_droolsTicketerServiceLayer.setTicketerPlugin(m_ticketerPlugin);
         m_droolsTicketerServiceLayer.setAlarmEntityNotifier(m_alarmEntityNotifier);
-        
-        EasyMock.reset(m_configDao);
         
         m_alarm = new OnmsAlarm();
         m_alarm.setId(1);
@@ -109,9 +110,17 @@ public class DroolsTicketerServiceLayerTest {
         m_ticket.setId("4");
     }
 
+    @After
+    public void tearDown() throws Exception {
+        verifyNoMoreInteractions(m_configDao);
+        verifyNoMoreInteractions(m_alarmDao);
+        verifyNoMoreInteractions(m_ticketerPlugin);
+        verifyNoMoreInteractions(m_alarmEntityNotifier);
+    }
+
     @Test
     public void testCreateTicketForAlarm() throws PluginException {
-        EasyMock.expect(m_alarmDao.get(m_alarm.getId())).andReturn(m_alarm);
+        when(m_alarmDao.get(m_alarm.getId())).thenReturn(m_alarm);
 
         expectNewTicket();
 
@@ -119,11 +128,7 @@ public class DroolsTicketerServiceLayerTest {
 
         expectAnUpdateToAlarmNotifier(null, TroubleTicketState.OPEN);
 
-        m_easyMockUtils.replayAll();
-
         m_droolsTicketerServiceLayer.createTicketForAlarm(m_alarm.getId(), new HashMap<>());
-
-        m_easyMockUtils.verifyAll();
     }
     
     /**
@@ -132,67 +137,60 @@ public class DroolsTicketerServiceLayerTest {
     @Test
     public void testFailedCreateTicketForAlarm() throws PluginException {
     	
-        EasyMock.expect(m_alarmDao.get(m_alarm.getId())).andReturn(m_alarm);
-        
-        m_ticketerPlugin.saveOrUpdate(EasyMock.isA(Ticket.class));
+        when(m_alarmDao.get(m_alarm.getId())).thenReturn(m_alarm);
 
-        EasyMock.expectLastCall().andThrow(new PluginException("Failed Create"));
+        doThrow(new PluginException("Failed to create")).when(m_ticketerPlugin).saveOrUpdate(any(Ticket.class));
 
         expectNewAlarmState(TroubleTicketState.CREATE_FAILED);
 
         expectAnUpdateToAlarmNotifier(null, TroubleTicketState.CREATE_FAILED);
         
-        m_easyMockUtils.replayAll();
-        
         m_droolsTicketerServiceLayer.createTicketForAlarm(m_alarm.getId(), new HashMap<>());
-        
-        m_easyMockUtils.verifyAll();
     }
 
     private void expectNewAlarmState(final TroubleTicketState state) {
-        m_alarmDao.saveOrUpdate(m_alarm);
-        EasyMock.expectLastCall().andAnswer(() -> {
-            OnmsAlarm alarm = (OnmsAlarm) EasyMock.getCurrentArguments()[0];
-            assertEquals(state, alarm.getTTicketState());
-            return null;
-        });
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(final InvocationOnMock invocation) throws Throwable {
+                OnmsAlarm alarm = (OnmsAlarm) invocation.getArgument(0);
+                assertEquals(state, alarm.getTTicketState());
+                return null;
+            }
+        }).when(m_alarmDao).saveOrUpdate(m_alarm);
     }
 
     private void expectNewTicket() throws PluginException {
-        m_ticketerPlugin.saveOrUpdate(EasyMock.isA(Ticket.class));
-        EasyMock.expectLastCall().andAnswer(() -> {
-            Ticket ticket = (Ticket) EasyMock.getCurrentArguments()[0];
-            assertNull(ticket.getId());
-            ticket.setId("7");
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(final InvocationOnMock invocation) throws Throwable {
+                Ticket ticket = (Ticket) invocation.getArgument(0);
+                assertNull(ticket.getId());
+                ticket.setId("7");
 
-            // Verify the properties as generated by the Drools engine
-            assertEquals("Not Test Logmsg", ticket.getSummary());
-            assertEquals("Not Test Description", ticket.getDetails());
-            assertEquals("Jesse", ticket.getUser());
-            assertEquals(
-                    ImmutableMap.of("custom-key", "custom-value"),
-                    ticket.getAttributes());
-            return null;
-        });
+                // Verify the properties as generated by the Drools engine
+                assertEquals("Not Test Logmsg", ticket.getSummary());
+                assertEquals("Not Test Description", ticket.getDetails());
+                assertEquals("Jesse", ticket.getUser());
+                assertEquals(
+                        ImmutableMap.of("custom-key", "custom-value"),
+                        ticket.getAttributes());
+                return null;
+            }
+        }).when(m_ticketerPlugin).saveOrUpdate(any(Ticket.class));
     }
 
     private void expectAnUpdateToAlarmNotifier(TroubleTicketState prevState, TroubleTicketState newState) {
-
-        m_alarmEntityNotifier.didChangeTicketStateForAlarm(m_alarm, prevState);
-        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
-
+        doAnswer(new Answer<Object>() {
             @Override
-            public Object answer() throws Throwable {
-                OnmsAlarm alarm = (OnmsAlarm) EasyMock.getCurrentArguments()[0];
-                TroubleTicketState ticketState = (TroubleTicketState) EasyMock.getCurrentArguments()[1];
+            public Object answer(final InvocationOnMock invocation) throws Throwable {
+                OnmsAlarm alarm = (OnmsAlarm) invocation.getArgument(0);
+                TroubleTicketState ticketState = invocation.getArgument(1);
                 TroubleTicketState expectedState = alarm.getTTicketState();
                 assertEquals(prevState, ticketState);
                 assertNotNull(expectedState);
                 assertEquals(newState, expectedState);
                 return null;
-            }
-
-        });
-
+            }            
+        }).when(m_alarmEntityNotifier).didChangeTicketStateForAlarm(m_alarm, prevState);
     }
 }
