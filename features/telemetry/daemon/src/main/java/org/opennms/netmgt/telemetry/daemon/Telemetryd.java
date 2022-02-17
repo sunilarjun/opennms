@@ -90,6 +90,7 @@ public class Telemetryd implements SpringServiceDaemon {
     @Autowired
     private ConnectorManager connectorManager;
 
+    private List<TelemetrySinkModule> sinkModules = new ArrayList<>();
     private List<TelemetryMessageConsumer> consumers = new ArrayList<>();
     private List<Listener> listeners = new ArrayList<>();
 
@@ -108,6 +109,7 @@ public class Telemetryd implements SpringServiceDaemon {
             // This allows for queue to have their respective queues and thread
             // related settings to help limit the impact of one adapter on another.
             final TelemetrySinkModule sinkModule = new TelemetrySinkModule(queueConfig);
+            sinkModules.add(sinkModule);
             beanFactory.autowireBean(sinkModule);
             beanFactory.initializeBean(sinkModule, "sinkModule");
 
@@ -166,6 +168,12 @@ public class Telemetryd implements SpringServiceDaemon {
     public synchronized void destroy() {
         LOG.info("{} is stopping.", NAME);
 
+        final AutowireCapableBeanFactory beanFactory = applicationContext.getAutowireCapableBeanFactory();
+
+        // Stop the connectors
+        LOG.info("Stopping connectors.");
+        connectorManager.stop();
+
         // Stop the listeners
         for (Listener listener : listeners) {
             try {
@@ -177,9 +185,17 @@ public class Telemetryd implements SpringServiceDaemon {
         }
         listeners.clear();
 
-        // Stop the connectors
-        LOG.info("Stopping connectors.");
-        connectorManager.stop();
+        // Stop the consumers
+        for (TelemetryMessageConsumer consumer : consumers) {
+            try {
+                LOG.info("Stopping consumer for {} protocol.", consumer.getQueue().getName());
+                messageConsumerManager.unregisterConsumer(consumer);
+            } catch (Exception e) {
+                LOG.error("Error while stopping consumer.", e);
+            }
+            beanFactory.destroyBean(consumer);
+        }
+        consumers.clear();
 
         // Stop the dispatchers
         for (AsyncDispatcher<?> dispatcher : telemetryRegistry.getDispatchers()) {
@@ -192,18 +208,10 @@ public class Telemetryd implements SpringServiceDaemon {
         }
         telemetryRegistry.clearDispatchers();
 
-        final AutowireCapableBeanFactory beanFactory = applicationContext.getAutowireCapableBeanFactory();
-        // Stop the consumers
-        for (TelemetryMessageConsumer consumer : consumers) {
-            try {
-                LOG.info("Stopping consumer for {} protocol.", consumer.getQueue().getName());
-                messageConsumerManager.unregisterConsumer(consumer);
-            } catch (Exception e) {
-                LOG.error("Error while stopping consumer.", e);
-            }
-            beanFactory.destroyBean(consumer);
+        for (TelemetrySinkModule module : sinkModules) {
+            beanFactory.destroyBean(module);
         }
-        consumers.clear();
+        sinkModules.clear();
 
         LOG.info("{} is stopped.", NAME);
     }
