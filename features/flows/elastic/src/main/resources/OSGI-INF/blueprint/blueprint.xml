@@ -63,6 +63,9 @@
 
             <!-- Enrichment settings -->
             <cm:property name="clockSkewCorrectionThreshold" value="0" />
+
+            <!-- Flow Mangling -->
+            <cm:property name="mangleScriptPath" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -128,6 +131,15 @@
         <property name="numberOfReplicas" value="${aggregate.settings.index.number_of_replicas}"/>
         <property name="refreshInterval" value="${aggregate.settings.index.refresh_interval}"/>
         <property name="routingPartitionSize" value="${aggregate.settings.index.routing_partition_size}"/>
+    </bean>
+
+    <!-- Mangling -->
+    <bean id="sem" class="org.opennms.features.osgi.script.OSGiScriptEngineManager">
+        <argument ref="blueprintBundleContext" />
+    </bean>
+    <bean id="mangler" class="org.opennms.netmgt.flows.elastic.DocumentMangler">
+        <argument ref="sem" />
+        <property name="path" value="${mangleScriptPath}"/>
     </bean>
 
     <!-- Enrichment -->
