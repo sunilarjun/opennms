@@ -32,12 +32,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.StringReader;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.spec.EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -50,6 +55,7 @@ import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.config.keys.KeyUtils;
+import org.bouncycastle.util.io.pem.PemReader;
 import org.opennms.core.utils.InetAddressUtils;
 import org.opennms.features.deviceconfig.sshscripting.SshScriptingService;
 import org.slf4j.Logger;
@@ -87,6 +93,7 @@ public class SshScriptingServiceImpl implements SshScriptingService {
             String script,
             String user,
             String password,
+            final String authKey,
             final SocketAddress target,
             final String hostKeyFingerprint,
             Map<String, String> vars,
@@ -96,7 +103,7 @@ public class SshScriptingServiceImpl implements SshScriptingService {
                 errorLines -> Result.failure(errorLines.stream().collect(Collectors.joining("\n", "unrecognized statements:\n", ""))),
                 statements -> {
                     try {
-                        try (var sshInteraction = new SshInteractionImpl(user, password, target, hostKeyFingerprint, vars, timeout, tftpServerIPv4Address, tftpServerIPv6Address)) {
+                        try (var sshInteraction = new SshInteractionImpl(user, password, authKey, target, hostKeyFingerprint, vars, timeout, tftpServerIPv4Address, tftpServerIPv6Address)) {
                             for (var statement : statements) {
                                 try {
                                     statement.execute(sshInteraction);
@@ -140,6 +147,7 @@ public class SshScriptingServiceImpl implements SshScriptingService {
         private SshInteractionImpl(
                 String user,
                 String password,
+                final String authKey,
                 final SocketAddress target,
                 final String hostKeyFingerprint,
                 Map<String, String> vars,
@@ -190,7 +198,22 @@ public class SshScriptingServiceImpl implements SshScriptingService {
                 }
 
                 try {
-                    session.addPasswordIdentity(password);
+                    if (password != null) {
+                        session.addPasswordIdentity(password);
+                    }
+
+                    if (!Strings.isNullOrEmpty(authKey)) {
+                        try (final var reader = new PemReader(new StringReader(authKey))) {
+                            final var spec = new X509EncodedKeySpec(reader.readPemObject().getContent());
+                            final var privateKey = KeyFactory.getInstance(spec.getAlgorithm()).generatePrivate(spec);
+                            final var publicKey = KeyUtils.recoverPublicKey(privateKey);
+
+                            this.session.addPublicKeyIdentity(new KeyPair(publicKey, privateKey));
+                        } catch (final Exception e) {
+                            LOG.error("Invalid ssh private key", e);
+                        }
+                    }
+
                     session.auth().verify(timeout);
 
                     channel = session.createShellChannel();
