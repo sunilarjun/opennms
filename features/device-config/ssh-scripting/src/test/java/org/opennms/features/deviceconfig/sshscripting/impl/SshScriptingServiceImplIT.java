@@ -31,10 +31,9 @@ package org.opennms.features.deviceconfig.sshscripting.impl;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.io.IOException;
+import java.io.StringWriter;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
-import java.security.PublicKey;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,12 +42,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.sshd.common.config.keys.AuthorizedKeyEntry;
 import org.apache.sshd.common.config.keys.KeyUtils;
 import org.apache.sshd.common.keyprovider.KeyPairProvider;
 import org.apache.sshd.common.util.security.SecurityUtils;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.auth.pubkey.AuthorizedKeyEntriesPublickeyAuthenticator;
+import org.apache.sshd.server.auth.pubkey.KeySetPublickeyAuthenticator;
 import org.apache.sshd.util.test.EchoShellFactory;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemObjectGenerator;
+import org.bouncycastle.util.io.pem.PemWriter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +67,19 @@ public class SshScriptingServiceImplIT {
     private SshServer sshd;
 
     private KeyPair hostKey;
+
+    private static final String AUTH_KEY_PRIV = String.join("\n",
+                                                            "-----BEGIN OPENSSH PRIVATE KEY-----",
+                                                            "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAaAAAABNlY2RzYS",
+                                                            "1zaGEyLW5pc3RwMjU2AAAACG5pc3RwMjU2AAAAQQR5vNT3wu+vPGJEixlWNpvJtJP43PIF",
+                                                            "eNQNkb7W3+0cltYLG5q2B+ITra5fh311/zbnrWVS9FeIVERyq5x42EH8AAAAqN++TUzfvk",
+                                                            "1MAAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHm81PfC7688YkSL",
+                                                            "GVY2m8m0k/jc8gV41A2Rvtbf7RyW1gsbmrYH4hOtrl+HfXX/NuetZVL0V4hURHKrnHjYQf",
+                                                            "wAAAAhAOSF7jZV6pNDA4hMbxgj24CDbpNcJDS3sZqKsI7NXl+rAAAADGZvb2tlckBpZy0x",
+                                                            "MQECAw==",
+                                                            "-----END OPENSSH PRIVATE KEY-----");
+
+    private static final String AUTH_KEY_PUB = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHm81PfC7688YkSLGVY2m8m0k/jc8gV41A2Rvtbf7RyW1gsbmrYH4hOtrl+HfXX/NuetZVL0V4hURHKrnHjYQfw=";
 
     @Before
     public void prepare() throws Exception {
@@ -178,6 +195,10 @@ public class SshScriptingServiceImplIT {
         sshd.setPasswordAuthenticator(
                 (user, password, session) -> StringUtils.equals(user, USER) && StringUtils.equals(password, PASSWORD)
         );
+        sshd.setPublickeyAuthenticator(new AuthorizedKeyEntriesPublickeyAuthenticator(null,
+                                                                                      null,
+                                                                                      List.of(AuthorizedKeyEntry.parseAuthorizedKeyEntry(AUTH_KEY_PUB)),
+                                                                                      null));
         sshd.start();
     }
 
@@ -208,8 +229,42 @@ public class SshScriptingServiceImplIT {
                             "await: "+expectedIp
                         ).stream().collect(Collectors.joining("\n"));
 
-        final SshScriptingService.Result result = ss.execute(script, USER, PASSWORD, null, new InetSocketAddress(hostname, sshd.getPort()), KeyUtils.getFingerPrint(this.hostKey.getPublic()), Collections.emptyMap(), Duration.ofMillis(10000));
+        final SshScriptingService.Result result = ss.execute(script, USER, PASSWORD, null, new InetSocketAddress(hostname, sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
 
         assertThat(result.isSuccess(), is(true));
+    }
+
+    @Test
+    public void testHostKey() throws Exception {
+        final SshScriptingServiceImpl ss = new SshScriptingServiceImpl();
+
+        var result1 = ss.execute("send:foo\nawait:foo", USER, PASSWORD, null, new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result1.isSuccess(), is(true));
+
+        var result2 = ss.execute("send:foo\nawait:foo", USER, PASSWORD, null, new InetSocketAddress("localhost", sshd.getPort()), KeyUtils.getFingerPrint(this.hostKey.getPublic()), Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result2.isSuccess(), is(true));
+
+        var result3 = ss.execute("send:foo\nawait:foo", USER, PASSWORD, null, new InetSocketAddress("localhost", sshd.getPort()), "invalid", Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result3.isSuccess(), is(false));
+    }
+
+    @Test
+    public void testAuthKey() throws Exception {
+        final SshScriptingServiceImpl ss = new SshScriptingServiceImpl();
+
+        var result1 = ss.execute("send:foo\nawait:foo", USER, PASSWORD, AUTH_KEY_PRIV, new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result1.isSuccess(), is(true));
+
+        var result2 = ss.execute("send:foo\nawait:foo", USER, null, AUTH_KEY_PRIV, new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result2.isSuccess(), is(true));
+
+        var result3 = ss.execute("send:foo\nawait:foo", USER, "wrong", AUTH_KEY_PRIV, new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result3.isSuccess(), is(true));
+
+        var result4 = ss.execute("send:foo\nawait:foo", USER, PASSWORD, "invalid", new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result4.isSuccess(), is(true));
+
+        var result5 = ss.execute("send:foo\nawait:foo", USER, "wrong", "invalid", new InetSocketAddress("localhost", sshd.getPort()), null, Collections.emptyMap(), Duration.ofMillis(10000));
+        assertThat(result5.isSuccess(), is(false));
     }
 }

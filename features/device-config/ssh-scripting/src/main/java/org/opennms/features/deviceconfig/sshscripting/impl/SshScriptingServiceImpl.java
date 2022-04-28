@@ -32,17 +32,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.io.StringReader;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -54,8 +49,9 @@ import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.NamedResource;
 import org.apache.sshd.common.config.keys.KeyUtils;
-import org.bouncycastle.util.io.pem.PemReader;
+import org.apache.sshd.common.util.security.SecurityUtils;
 import org.opennms.core.utils.InetAddressUtils;
 import org.opennms.features.deviceconfig.sshscripting.SshScriptingService;
 import org.slf4j.Logger;
@@ -203,12 +199,13 @@ public class SshScriptingServiceImpl implements SshScriptingService {
                     }
 
                     if (!Strings.isNullOrEmpty(authKey)) {
-                        try (final var reader = new PemReader(new StringReader(authKey))) {
-                            final var spec = new X509EncodedKeySpec(reader.readPemObject().getContent());
-                            final var privateKey = KeyFactory.getInstance(spec.getAlgorithm()).generatePrivate(spec);
-                            final var publicKey = KeyUtils.recoverPublicKey(privateKey);
-
-                            this.session.addPublicKeyIdentity(new KeyPair(publicKey, privateKey));
+                        try {
+                            SecurityUtils.getKeyPairResourceParser()
+                                         .loadKeyPairs(this.session,
+                                                       NamedResource.ofName("auth-key"),
+                                                       null,
+                                                       authKey)
+                                         .forEach(session::addPublicKeyIdentity);
                         } catch (final Exception e) {
                             LOG.error("Invalid ssh private key", e);
                         }
