@@ -55,7 +55,11 @@ public class Snmp4JValue extends AbstractSnmpValue {
         if (value == null) {
             throw new NullPointerException("value attribute cannot be null");
         }
-        m_value = value;
+        if (value instanceof Opaque) {
+            m_value = OpaqueConverter.substituteOpaqueData((Opaque)value);
+        } else {
+            m_value = value;
+        }
     }
     
     Snmp4JValue(final int syntax, final byte[] initialBytes) {
@@ -98,7 +102,7 @@ public class Snmp4JValue extends AbstractSnmpValue {
             break;
         }
         case SMIConstants.SYNTAX_OPAQUE: {
-            m_value = new Opaque(bytes);
+            m_value = OpaqueConverter.substituteOpaqueData(new Opaque(bytes));
             break;
         }
         case SMIConstants.EXCEPTION_END_OF_MIB_VIEW: {

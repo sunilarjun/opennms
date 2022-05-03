@@ -99,7 +99,7 @@ public class Snmp4JValueFactory implements SnmpValueFactory {
 
     @Override
     public SnmpValue getOpaque(byte[] bs) {
-        return new Snmp4JValue(new Opaque(bs));
+        return new Snmp4JValue(OpaqueConverter.substituteOpaqueData(new Opaque(bs)));
     }
 
 
