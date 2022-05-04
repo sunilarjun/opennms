@@ -40,7 +40,7 @@
     <property name="nodeDao" ref="nodeDao" />
   </bean>
 
-  <camelContext autoStartup="true" id="eifAdapterCamelContext" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
+  <camelContext autoStartup="true" id="eifAdapterCamelContext" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
     <propertyPlaceholder id="properties" location="blueprint:eifAdapterProperties" />
 
     <route id="eifToEvent">

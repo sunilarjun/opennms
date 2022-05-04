@@ -38,7 +38,7 @@
         <property name="timeout" value="15"/>
     </bean>
 
-    <camelContext id="rpcServer" xmlns="http://camel.apache.org/schema/blueprint">
+    <camelContext id="rpcServer" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint">
         <!-- Exchanges contain credentials i.e. SNMP community details, so avoid logging them -->
         <properties>
             <property key="CamelLogDebugBodyMaxChars" value="{{body.debug}}"/>

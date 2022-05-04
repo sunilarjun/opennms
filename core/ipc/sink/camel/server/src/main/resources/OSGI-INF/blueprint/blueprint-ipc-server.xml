@@ -41,7 +41,7 @@
 
     <service ref="camelMessageConsumerManager" interface="org.opennms.core.ipc.sink.api.MessageConsumerManager" />
 
-    <camelContext id="sinkServer" xmlns="http://camel.apache.org/schema/blueprint">
+    <camelContext id="sinkServer" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint">
         <!-- Exchanges contain credentials i.e. SNMP community details, so avoid logging them -->
         <properties>
             <property key="CamelLogDebugBodyMaxChars" value="{{body.debug}}"/>

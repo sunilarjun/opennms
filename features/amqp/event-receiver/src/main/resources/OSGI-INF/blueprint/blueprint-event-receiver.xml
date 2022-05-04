@@ -56,7 +56,7 @@
     <property name="timeout" value="15"/>
   </bean>
 
-  <camelContext autoStartup="true" id="amqpEventReceiverCamelContext" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
+  <camelContext autoStartup="true" id="amqpEventReceiverCamelContext" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
     <propertyPlaceholder id="properties" location="blueprint:eventReceiverProperties" />
 
     <route id="receiveEvent">

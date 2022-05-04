@@ -16,6 +16,6 @@
 		http://camel.apache.org/schema/blueprint/camel-blueprint-2.19.1.xsd
 ">
 
-	<camelContext id="emptyCamelContext" xmlns="http://camel.apache.org/schema/blueprint"/>
+	<camelContext id="emptyCamelContext" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint"/>
 
 </blueprint>

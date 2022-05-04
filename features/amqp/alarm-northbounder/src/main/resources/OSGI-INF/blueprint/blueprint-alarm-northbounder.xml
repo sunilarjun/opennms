@@ -65,7 +65,7 @@
     <property name="timeout" value="15"/>
   </bean>
 
-  <camelContext autoStartup="true" id="amqpAlarmNorthbounderCamelContext" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
+  <camelContext autoStartup="true" id="amqpAlarmNorthbounderCamelContext" registerEndpointIdsFromRoute="true" xmlns="http://camel.apache.org/schema/blueprint" allowUseOriginalMessage="false">
     <propertyPlaceholder id="properties" location="blueprint:alarmNorthbounderProperties" />
 
     <route id="forwardAlarm">
