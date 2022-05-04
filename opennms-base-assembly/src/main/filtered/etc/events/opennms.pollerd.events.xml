@@ -555,6 +555,16 @@
       <severity>Normal</severity>
    </event>
     <event>
+        <uei>uei.opennms.org/deviceconfig/configBackupStarted</uei>
+        <event-label>OpenNMS-defined node event: configBackupStarted</event-label>
+        <descr>&lt;p>Config backup started on %service%
+            during the last poll on interface %interface%.&lt;/p></descr>
+        <logmsg dest="logndisplay">
+            %service% config backup started on interface %interface%.
+        </logmsg>
+        <severity>Normal</severity>
+    </event>
+    <event>
         <uei>uei.opennms.org/deviceconfig/configRetrievalFailed</uei>
         <event-label>OpenNMS-defined node event: configRetrievalFailed</event-label>
         <descr>&lt;p>Failed to retrieve config associated with %service%

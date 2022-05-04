@@ -38,6 +38,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -57,16 +58,22 @@ import org.opennms.features.deviceconfig.retrieval.api.Retriever;
 import org.opennms.features.deviceconfig.service.DeviceConfigConstants;
 import org.opennms.netmgt.dao.api.IpInterfaceDao;
 import org.opennms.netmgt.dao.api.SessionUtils;
+import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.model.OnmsIpInterface;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.poller.MonitoredService;
 import org.opennms.netmgt.poller.PollStatus;
+import org.opennms.netmgt.dao.mock.EventAnticipator;
+import org.opennms.netmgt.dao.mock.MockEventIpcManager;
 
 import io.vavr.control.Either;
+import org.opennms.netmgt.xml.event.Event;
 
 public class DeviceConfigMonitorTest {
 
     private static final MonitoredService svc = Mockito.mock(MonitoredService.class);
+
+    private final MockEventIpcManager m_eventIpcManager = new MockEventIpcManager();
     private static final Map<String, Object> params = new HashMap<>() {{
         put(DeviceConfigMonitor.SCRIPT, "");
         put(DeviceConfigMonitor.USERNAME, "");
@@ -121,7 +128,7 @@ public class DeviceConfigMonitorTest {
     }
 
     @Test
-    public void testTriggeredRetrieval() {
+    public void testTriggeredRetrieval() throws UnknownHostException {
         final Instant schedule = Instant.now().minus(5, ChronoUnit.MINUTES);
         int minute = schedule.atZone(TimeZone.getDefault().toZoneId()).getMinute();
         int hour = schedule.atZone(TimeZone.getDefault().toZoneId()).getHour();
@@ -131,7 +138,17 @@ public class DeviceConfigMonitorTest {
         params.put(DeviceConfigConstants.TRIGGERED_POLL, "true");
 
         params.put(DeviceConfigMonitor.LAST_RETRIEVAL, String.valueOf(Instant.now().minus(3, ChronoUnit.MINUTES).toEpochMilli()));
+
+        EventAnticipator anticipator = m_eventIpcManager.getEventAnticipator();
+        Event event = new Event();
+        event.setUei(EventConstants.DEVICE_CONFIG_BACKUP_STARTED);
+        anticipator.anticipateEvent(event);
+
+        event.setInterfaceAddress(InetAddress.getLocalHost());
         assertThat(doesItRun(params), is(true));
+
+        anticipator.waitForAnticipated(5 * 1000);
+        anticipator.verifyAnticipated();
     }
 
     @Test

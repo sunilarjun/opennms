@@ -50,7 +50,10 @@ import org.opennms.features.deviceconfig.retrieval.api.Retriever;
 import org.opennms.features.deviceconfig.service.DeviceConfigConstants;
 import org.opennms.netmgt.dao.api.IpInterfaceDao;
 import org.opennms.netmgt.dao.api.SessionUtils;
+import org.opennms.netmgt.events.api.EventConstants;
+import org.opennms.netmgt.events.api.EventForwarder;
 import org.opennms.netmgt.model.OnmsIpInterface;
+import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.poller.DeviceConfig;
 import org.opennms.netmgt.poller.MonitoredService;
 import org.opennms.netmgt.poller.PollStatus;
@@ -83,6 +86,7 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
     private IpInterfaceDao ipInterfaceDao;
     private DeviceConfigDao deviceConfigDao;
     private SessionUtils sessionUtils;
+    private EventForwarder eventForwarder;
 
     @Override
     public Map<String, Object> getRuntimeAttributes(final MonitoredService svc, final Map<String, Object> parameters) {
@@ -96,6 +100,10 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
 
         if (sessionUtils == null) {
             sessionUtils = BeanUtils.getBean("daoContext", "sessionUtils", SessionUtils.class);
+        }
+
+        if (eventForwarder == null) {
+            eventForwarder = BeanUtils.getBean("daoContext", "eventForwarder", EventForwarder.class);
         }
 
         return sessionUtils.withReadOnlyTransaction(() -> {
@@ -156,6 +164,10 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
                 return PollStatus.unknown("Skipping. Next retrieval scheduled for " + nextRun);
             }
         }
+
+        final OnmsIpInterface ipInterface = ipInterfaceDao.findByNodeIdAndIpAddress(svc.getNodeId(), svc.getIpAddr());
+        final String serviceName = svc.getSvcName();
+        sendEvent(ipInterface, serviceName, EventConstants.DEVICE_CONFIG_BACKUP_STARTED);
 
         String script = getObjectAsStringFromParams(parameters, SCRIPT);
         String user = getObjectAsStringFromParams(parameters, USERNAME);
@@ -220,6 +232,10 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
         this.sessionUtils = sessionUtils;
     }
 
+    public void setEventForwarder(final EventForwarder eventForwarder) {
+        this.eventForwarder = eventForwarder;
+    }
+
     private Date getNextRunDate(String cronSchedule, Date lastRun) {
         final Trigger trigger = TriggerBuilder.newTrigger()
             .withSchedule(CronScheduleBuilder.cronSchedule(cronSchedule))
@@ -235,5 +251,12 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
             return (String) obj;
         }
         throw new IllegalArgumentException(key + " is not an instance of String");
+    }
+
+    private void sendEvent(OnmsIpInterface ipInterface, String serviceName, String uei) {
+        EventBuilder bldr = new EventBuilder(uei, "poller");
+        bldr.setIpInterface(ipInterface);
+        bldr.setService(serviceName);
+        eventForwarder.sendNow(bldr.getEvent());
     }
 }
