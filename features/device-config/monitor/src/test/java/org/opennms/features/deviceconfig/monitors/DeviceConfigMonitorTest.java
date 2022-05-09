@@ -74,6 +74,9 @@ public class DeviceConfigMonitorTest {
     private static final MonitoredService svc = Mockito.mock(MonitoredService.class);
 
     private final MockEventIpcManager m_eventIpcManager = new MockEventIpcManager();
+
+    private static final IpInterfaceDao m_interfaceDao = Mockito.mock(IpInterfaceDao.class);
+
     private static final Map<String, Object> params = new HashMap<>() {{
         put(DeviceConfigMonitor.SCRIPT, "");
         put(DeviceConfigMonitor.USERNAME, "");
@@ -85,6 +88,10 @@ public class DeviceConfigMonitorTest {
     public static void beforeAll() throws Exception {
         when(svc.getIpAddr()).thenReturn("localhost");
         when(svc.getAddress()).thenReturn(InetAddress.getLocalHost());
+
+        OnmsNode node = new OnmsNode();
+        node.setId(0);
+        when(m_interfaceDao.findByNodeIdAndIpAddress(anyInt(), any())).thenReturn(new OnmsIpInterface(InetAddress.getLocalHost(), node));
     }
 
     @Test
@@ -93,6 +100,8 @@ public class DeviceConfigMonitorTest {
         var retriever = mock(Retriever.class);
         var deviceConfigMonitor = new DeviceConfigMonitor();
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
 
         var config = new byte[] {1, 2, 3};
         var filename = "filename";
@@ -114,6 +123,8 @@ public class DeviceConfigMonitorTest {
         var retriever = mock(Retriever.class);
         var deviceConfigMonitor = new DeviceConfigMonitor();
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
 
         var retrievalFailure = "retrieval failure";
 
@@ -142,9 +153,9 @@ public class DeviceConfigMonitorTest {
         EventAnticipator anticipator = m_eventIpcManager.getEventAnticipator();
         Event event = new Event();
         event.setUei(EventConstants.DEVICE_CONFIG_BACKUP_STARTED);
+        event.setInterfaceAddress(InetAddress.getLocalHost());
         anticipator.anticipateEvent(event);
 
-        event.setInterfaceAddress(InetAddress.getLocalHost());
         assertThat(doesItRun(params), is(true));
 
         anticipator.waitForAnticipated(5 * 1000);
@@ -176,8 +187,10 @@ public class DeviceConfigMonitorTest {
 
         final DeviceConfigMonitor deviceConfigMonitor = new DeviceConfigMonitor();
         final Retriever retriever = mock(Retriever.class);
-
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
+
         when(retriever.retrieveConfig(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(
                 CompletableFuture.completedFuture(Either.left(new Retriever.Failure("didRun")))
         );
@@ -200,6 +213,9 @@ public class DeviceConfigMonitorTest {
         final Retriever retriever = mock(Retriever.class);
 
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
+
         when(retriever.retrieveConfig(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(
                 CompletableFuture.completedFuture(Either.left(new Retriever.Failure("didRun")))
         );
@@ -214,6 +230,9 @@ public class DeviceConfigMonitorTest {
         final Retriever retriever = mock(Retriever.class);
 
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
+
         when(retriever.retrieveConfig(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(
                 CompletableFuture.completedFuture(Either.left(new Retriever.Failure("didRun")))
         );
@@ -227,6 +246,8 @@ public class DeviceConfigMonitorTest {
         var retriever = mock(Retriever.class);
         var deviceConfigMonitor = new DeviceConfigMonitor();
         deviceConfigMonitor.setRetriever(retriever);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
 
         when(retriever.retrieveConfig(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(
                 new CompletableFuture()
@@ -261,6 +282,8 @@ public class DeviceConfigMonitorTest {
         deviceConfigMonitor.setDeviceConfigDao(deviceConfigDao);
         deviceConfigMonitor.setIpInterfaceDao(ipInterfaceDao);
         deviceConfigMonitor.setSessionUtils(sessionUtils);
+        deviceConfigMonitor.setIpInterfaceDao(m_interfaceDao);
+        deviceConfigMonitor.setEventForwarder(m_eventIpcManager);
         Map<String, Object> params = deviceConfigMonitor.getRuntimeAttributes(monitoredService, parameters);
         assertFalse(params.isEmpty());
         String script = (String)params.get("script");
