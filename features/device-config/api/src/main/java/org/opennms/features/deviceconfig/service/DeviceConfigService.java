@@ -36,6 +36,11 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DeviceConfigService {
 
+    public static final String REQUEST_REST_API = "API request";
+    public static final String REQUEST_SCHEDULED = "Scheduled backup";
+    public static final String REASON_KARAF = "Karaf shell request";
+    public static final String REASON_UNK = "unknown";
+
     /**
      *   Trigger device config backup for the given ipAddress at given location.
      *
@@ -43,10 +48,11 @@ public interface DeviceConfigService {
      * @param location   specific minion location at which we need to fetch device config.
      * @param service    name of the bound service.
      * @param persist
+     * @param reason    Reason for the backup being triggered
      * @throws IOException
      * @return
      */
-    CompletableFuture<Boolean> triggerConfigBackup(String ipAddress, String location, String service, boolean persist) throws IOException;
+    CompletableFuture<Boolean> triggerConfigBackup(String ipAddress, String location, String service, boolean persist, String reason) throws IOException;
 
     /**
      * Get device config for the given ipAddress at given location.
@@ -59,7 +65,7 @@ public interface DeviceConfigService {
      * @throws IOException
      * @return
      */
-    CompletableFuture<DeviceConfig> getDeviceConfig(String ipAddress, String location, String service, boolean persist, int timeout) throws IOException;
+    CompletableFuture<DeviceConfig> getDeviceConfig(String ipAddress, String location, String service, boolean persist, String reason, int timeout) throws IOException;
 
     /**
      * Gets the backup jobs defined for the given interface.

@@ -35,4 +35,5 @@ public interface DeviceConfigConstants {
     static final String DEFAULT_CRON_SCHEDULE = "0 0 0 * * ?";
     static final String NEVER = "never";
     static final String RETENTION_PERIOD = "retention-period";
+    static final String BACKUP_REASON = "reason";
 }

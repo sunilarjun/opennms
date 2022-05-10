@@ -557,12 +557,12 @@
     <event>
         <uei>uei.opennms.org/deviceconfig/configBackupStarted</uei>
         <event-label>OpenNMS-defined node event: configBackupStarted</event-label>
-        <descr>&lt;p>Config backup started on %service%
-            during the last poll on interface %interface%.&lt;/p></descr>
+        <descr>&lt;p>Config backup started on %service% on interface %interface%.&lt;/p></descr>
         <logmsg dest="logndisplay">
             %service% config backup started on interface %interface%.
         </logmsg>
         <severity>Normal</severity>
+        <alarm-data reduction-key="%uei%:%dpname%:%nodeid%:%interface%:%service%" alarm-type="3" auto-clean="true"/>
     </event>
     <event>
         <uei>uei.opennms.org/deviceconfig/configRetrievalFailed</uei>

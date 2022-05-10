@@ -48,6 +48,7 @@ import org.opennms.features.deviceconfig.persistence.api.ConfigType;
 import org.opennms.features.deviceconfig.persistence.api.DeviceConfigDao;
 import org.opennms.features.deviceconfig.retrieval.api.Retriever;
 import org.opennms.features.deviceconfig.service.DeviceConfigConstants;
+import org.opennms.features.deviceconfig.service.DeviceConfigService;
 import org.opennms.netmgt.dao.api.IpInterfaceDao;
 import org.opennms.netmgt.dao.api.SessionUtils;
 import org.opennms.netmgt.events.api.EventConstants;
@@ -167,7 +168,8 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
 
         final OnmsIpInterface ipInterface = ipInterfaceDao.findByNodeIdAndIpAddress(svc.getNodeId(), svc.getIpAddr());
         final String serviceName = svc.getSvcName();
-        sendEvent(ipInterface, serviceName, EventConstants.DEVICE_CONFIG_BACKUP_STARTED);
+        final String backupReason = getKeyedString(parameters, DeviceConfigConstants.BACKUP_REASON, DeviceConfigService.REASON_UNK);
+        sendEvent(ipInterface, serviceName, EventConstants.DEVICE_CONFIG_BACKUP_STARTED, backupReason);
 
         String script = getObjectAsStringFromParams(parameters, SCRIPT);
         String user = getObjectAsStringFromParams(parameters, USERNAME);
@@ -253,10 +255,16 @@ public class DeviceConfigMonitor extends AbstractServiceMonitor {
         throw new IllegalArgumentException(key + " is not an instance of String");
     }
 
-    private void sendEvent(OnmsIpInterface ipInterface, String serviceName, String uei) {
+    private void sendEvent(OnmsIpInterface ipInterface, String serviceName, String uei, String reason) {
         EventBuilder bldr = new EventBuilder(uei, "poller");
         bldr.setIpInterface(ipInterface);
         bldr.setService(serviceName);
-        eventForwarder.sendNow(bldr.getEvent());
+        bldr.addParam(DeviceConfigConstants.BACKUP_REASON, reason);
+        if (eventForwarder != null) {
+            eventForwarder.sendNow(bldr.getEvent());
+        }
+        else {
+            System.out.println("NO EVENT FORWARDER!");
+        }
     }
 }

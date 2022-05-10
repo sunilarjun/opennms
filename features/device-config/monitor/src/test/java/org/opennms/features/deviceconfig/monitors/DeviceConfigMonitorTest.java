@@ -219,7 +219,7 @@ public class DeviceConfigMonitorTest {
         when(retriever.retrieveConfig(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(
                 CompletableFuture.completedFuture(Either.left(new Retriever.Failure("didRun")))
         );
-
+        System.out.println("DCM: " + deviceConfigMonitor + ", svc: " + svc + ", params: " + params);
         PollStatus pollStatus = deviceConfigMonitor.poll(svc, params);
 
         assertThat(pollStatus.getStatusCode() != PollStatus.SERVICE_UNKNOWN, is(true));

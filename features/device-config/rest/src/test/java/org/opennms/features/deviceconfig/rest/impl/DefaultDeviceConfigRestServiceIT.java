@@ -267,9 +267,9 @@ public class DefaultDeviceConfigRestServiceIT {
         String message = "Invalid Ip Interface";
         CompletableFuture<Boolean> success = new CompletableFuture<>();
         Mockito.doReturn(success).when(deviceConfigService).triggerConfigBackup(Mockito.eq(ipAddress),
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString());
         Mockito.doThrow(new IllegalArgumentException(message)).when(deviceConfigService).triggerConfigBackup(Mockito.eq(invalidIpAddress),
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyString());
 
         var dto = new BackupRequestDTO(ipAddress, "MINION", "default", false);
         Response response = deviceConfigRestService.triggerDeviceConfigBackup(List.of(dto));

@@ -80,7 +80,7 @@ public class DcbGetCommand implements Action {
             System.out.printf("Not a valid host %s \n", host);
             return null;
         }
-        CompletableFuture<DeviceConfig> future = deviceConfigService.getDeviceConfig(host, location, service, persist, timeout);
+        CompletableFuture<DeviceConfig> future = deviceConfigService.getDeviceConfig(host, location, service, persist, DeviceConfigService.REASON_KARAF, timeout);
         while (true) {
             try {
                 try {

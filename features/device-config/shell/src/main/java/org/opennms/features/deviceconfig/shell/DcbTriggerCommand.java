@@ -70,7 +70,7 @@ public class DcbTriggerCommand implements Action {
             System.out.printf("Not a valid host %s \n", host);
             return null;
         }
-        CompletableFuture<Boolean> future = deviceConfigService.triggerConfigBackup(host, location, service, persist);
+        CompletableFuture<Boolean> future = deviceConfigService.triggerConfigBackup(host, location, service, persist, DeviceConfigService.REASON_KARAF);
         while (true) {
             try {
                 try {

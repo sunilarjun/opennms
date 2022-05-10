@@ -371,9 +371,9 @@ public class DefaultDeviceConfigRestService implements DeviceConfigRestService {
         for (var requestDto : backupRequestDtoList) {
             try {
                 if (requestDto.getBlocking()) {
-                    deviceConfigService.triggerConfigBackup(requestDto.getIpAddress(), requestDto.getLocation(), requestDto.getServiceName(), true).get();
+                    deviceConfigService.triggerConfigBackup(requestDto.getIpAddress(), requestDto.getLocation(), requestDto.getServiceName(), true, DeviceConfigService.REQUEST_REST_API).get();
                 } else {
-                    deviceConfigService.triggerConfigBackup(requestDto.getIpAddress(), requestDto.getLocation(), requestDto.getServiceName(), true);
+                    deviceConfigService.triggerConfigBackup(requestDto.getIpAddress(), requestDto.getLocation(), requestDto.getServiceName(), true, DeviceConfigService.REQUEST_REST_API);
                 }
             } catch (IllegalArgumentException e) {
                 LOG.error("Unable to trigger config backup for {} at location {} with configType {}",

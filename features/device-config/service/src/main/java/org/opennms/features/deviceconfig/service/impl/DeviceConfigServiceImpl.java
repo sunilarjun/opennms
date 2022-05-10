@@ -85,7 +85,7 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
     private PollerConfig pollerConfig;
 
     @Override
-    public CompletableFuture<Boolean> triggerConfigBackup(String ipAddress, String location, String service, boolean persist) throws IOException {
+    public CompletableFuture<Boolean> triggerConfigBackup(String ipAddress, String location, String service, boolean persist, String reason) throws IOException {
         try {
             InetAddress.getByName(ipAddress);
         } catch (UnknownHostException e) {
@@ -93,7 +93,7 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
             throw new IllegalArgumentException("Unknown/Invalid IpAddress " + ipAddress);
         }
 
-        return pollDeviceConfig(ipAddress, location, service, persist)
+        return pollDeviceConfig(ipAddress, location, service, persist, reason)
                 .thenApply(response -> {
                     if (response.getPollStatus().isAvailable()) {
                         return true;
@@ -108,8 +108,8 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
     }
 
     @Override
-    public CompletableFuture<DeviceConfig> getDeviceConfig(String ipAddress, String location, String service, boolean persist, int timeout) throws IOException {
-        return pollDeviceConfig(ipAddress, location, service, persist)
+    public CompletableFuture<DeviceConfig> getDeviceConfig(String ipAddress, String location, String service, boolean persist, String reason, int timeout) throws IOException {
+        return pollDeviceConfig(ipAddress, location, service, persist, reason)
                 .orTimeout(timeout, TimeUnit.MILLISECONDS)
                 .thenApply(resp -> {
                     if (resp.getPollStatus().isAvailable()) {
@@ -186,7 +186,7 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
                 .collect(Collectors.toList());
     }
 
-    private CompletableFuture<PollerResponse> pollDeviceConfig(String ipAddress, String location, String serviceName, boolean persist) throws IOException {
+    private CompletableFuture<PollerResponse> pollDeviceConfig(String ipAddress, String location, String serviceName, boolean persist, String reason) throws IOException {
         final var match = getPollerConfig().findService(ipAddress, serviceName)
                 .orElseThrow(IllegalArgumentException::new);
 
@@ -227,6 +227,7 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
                     .withPatternVariables(match.patternVariables)
                     .withAttributes(match.service.getParameterMap())
                     .withAttribute(DeviceConfigConstants.TRIGGERED_POLL, "true")
+                    .withAttribute(DeviceConfigConstants.BACKUP_REASON, reason)
                     .execute();
         } else {
             // No persistence of config.
